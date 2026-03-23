@@ -220,7 +220,7 @@
   /* Results grid */
   .results-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: 8px;
   }
 
@@ -256,7 +256,7 @@
 
   .phase-row {
     display: grid;
-    grid-template-columns: 80px 1fr 70px;
+    grid-template-columns: 72px 1fr 60px 52px;
     align-items: center;
     gap: 10px;
   }
@@ -280,7 +280,8 @@
   .phase-fill.flat { background: var(--accent2); }
   .phase-fill.down { background: var(--accent); }
 
-  .phase-kj { font-size: 11px; color: var(--text); text-align: right; font-weight: 500; }
+  .phase-kj  { font-size: 11px; color: var(--text); text-align: right; font-weight: 500; }
+  .phase-dur { font-size: 11px; color: var(--muted); text-align: right; }
 
   /* Effort breakdown */
   .breakdown-section {
@@ -498,14 +499,24 @@
           <div class="rc-unit">kilocalories</div>
         </div>
         <div class="result-card">
-          <div class="rc-label">Puissance moyenne</div>
-          <div class="rc-val" id="res-w">—</div>
-          <div class="rc-unit">watts</div>
-        </div>
-        <div class="result-card">
           <div class="rc-label">Durée estimée</div>
           <div class="rc-val" id="res-dur">—</div>
           <div class="rc-unit">hh:mm</div>
+        </div>
+        <div class="result-card">
+          <div class="rc-label">Puissance moyenne globale</div>
+          <div class="rc-val" id="res-w">—</div>
+          <div class="rc-unit">watts · descente = 0 W</div>
+        </div>
+        <div class="result-card" style="border-color: rgba(240,201,117,0.25);">
+          <div class="rc-label">Puissance montée</div>
+          <div class="rc-val" id="res-w-up" style="color: var(--accent3);">—</div>
+          <div class="rc-unit">watts</div>
+        </div>
+        <div class="result-card" style="border-color: rgba(77,232,180,0.25);">
+          <div class="rc-label">Puissance plat</div>
+          <div class="rc-val" id="res-w-flat" style="color: var(--accent2);">—</div>
+          <div class="rc-unit">watts</div>
         </div>
       </div>
 
@@ -520,21 +531,29 @@
       <!-- Répartition des phases -->
       <div class="phase-section">
         <div class="section-label">Répartition des phases <span class="tag">depuis GPX</span></div>
+        <div style="display:grid; grid-template-columns: 72px 1fr 60px 52px; gap:10px; margin-bottom:6px; padding-bottom:6px; border-bottom: 1px solid var(--border);">
+          <span></span><span></span>
+          <span style="font-size:10px; color:var(--muted); text-align:right;">distance</span>
+          <span style="font-size:10px; color:var(--muted); text-align:right;">durée</span>
+        </div>
         <div class="phase-bars">
           <div class="phase-row">
             <span class="phase-name">Montée</span>
             <div class="phase-track"><div class="phase-fill up" id="bar-up" style="width:0%"></div></div>
             <span class="phase-kj" id="label-up">—</span>
+            <span class="phase-dur" id="dur-up">—</span>
           </div>
           <div class="phase-row">
             <span class="phase-name">Plat</span>
             <div class="phase-track"><div class="phase-fill flat" id="bar-flat" style="width:0%"></div></div>
             <span class="phase-kj" id="label-flat">—</span>
+            <span class="phase-dur" id="dur-flat">—</span>
           </div>
           <div class="phase-row">
             <span class="phase-name">Descente</span>
             <div class="phase-track"><div class="phase-fill down" id="bar-down" style="width:0%"></div></div>
             <span class="phase-kj" id="label-down">—</span>
+            <span class="phase-dur" id="dur-down">—</span>
           </div>
         </div>
       </div>
@@ -646,7 +665,8 @@ function calculate() {
   let distUp = 0, distFlat = 0, distDown = 0;
   let dPlus = 0, dMinus = 0;
   let kjGrav = 0, kjAero = 0, kjRoll = 0;
-  let duration = 0;
+  let kjUp = 0, kjFlat = 0;
+  let duration = 0, durUp = 0, durFlat = 0, durDown = 0;
   let totalDist = 0;
 
   for (const s of segs) {
@@ -656,27 +676,41 @@ function calculate() {
     if (s.phase === 'up') {
       distUp += s.dist;
       dPlus += Math.max(0, s.dEle);
-      kjGrav += w * g * Math.max(0, s.dEle) / 1000;
-      kjAero += 0.5 * CdA * rho * vUp * vUp * distM / 1000;
-      kjRoll += Cr * w * g * distM / 1000;
-      duration += s.dist / (vUp * 3.6);
+      const grav = w * g * Math.max(0, s.dEle) / 1000;
+      const aero = 0.5 * CdA * rho * vUp * vUp * distM / 1000;
+      const roll = Cr * w * g * distM / 1000;
+      kjGrav += grav;
+      kjAero += aero;
+      kjRoll += roll;
+      kjUp   += grav + aero + roll;
+      const dt = s.dist / (vUp * 3.6);
+      duration += dt;
+      durUp    += dt;
     } else if (s.phase === 'flat') {
       distFlat += s.dist;
-      kjAero += 0.5 * CdA * rho * vFlat * vFlat * distM / 1000;
-      kjRoll += Cr * w * g * distM / 1000;
-      duration += s.dist / (vFlat * 3.6);
+      const aero = 0.5 * CdA * rho * vFlat * vFlat * distM / 1000;
+      const roll = Cr * w * g * distM / 1000;
+      kjAero += aero;
+      kjRoll += roll;
+      kjFlat += aero + roll;
+      const dt = s.dist / (vFlat * 3.6);
+      duration += dt;
+      durFlat  += dt;
     } else {
       distDown += s.dist;
       dMinus += Math.abs(Math.min(0, s.dEle));
       kjRoll += Cr * w * g * distM / 1000;
-      duration += s.dist / (vDown * 3.6);
+      const dt = s.dist / (vDown * 3.6);
+      duration += dt;
+      durDown  += dt;
     }
   }
 
   const total = kjGrav + kjAero + kjRoll;
-  const avgW = Math.round(total * 1000 / (duration * 3600));
-  const kcal = Math.round(total / eff / 4.18);
-  const phaseTot = distUp + distFlat + distDown;
+  const avgW  = Math.round(total * 1000 / (duration * 3600));
+  const wUp   = durUp   > 0 ? Math.round(kjUp   * 1000 / (durUp   * 3600)) : 0;
+  const wFlat = durFlat > 0 ? Math.round(kjFlat * 1000 / (durFlat * 3600)) : 0;
+  const kcal  = Math.round(total / eff / 4.18);
 
   // GPX stats
   document.getElementById('stat-dist').textContent = totalDist.toFixed(1);
@@ -686,12 +720,15 @@ function calculate() {
   document.getElementById('stat-altmax').textContent = Math.round(Math.max(...eles));
 
   // Results
-  document.getElementById('res-kj').textContent = Math.round(total).toLocaleString('fr');
+  document.getElementById('res-kj').textContent   = Math.round(total).toLocaleString('fr');
   document.getElementById('res-kcal').textContent = Math.round(kcal).toLocaleString('fr');
-  document.getElementById('res-w').textContent = avgW;
-  document.getElementById('res-dur').textContent = fmtDur(duration);
+  document.getElementById('res-w').textContent    = avgW;
+  document.getElementById('res-w-up').textContent   = wUp;
+  document.getElementById('res-w-flat').textContent = wFlat;
+  document.getElementById('res-dur').textContent  = fmtDur(duration);
 
   // Phase bars
+  const phaseTot = distUp + distFlat + distDown;
   const pUp   = distUp   / phaseTot * 100;
   const pFlat = distFlat / phaseTot * 100;
   const pDown = distDown / phaseTot * 100;
@@ -701,6 +738,9 @@ function calculate() {
   document.getElementById('label-up').textContent   = distUp.toFixed(1) + ' km';
   document.getElementById('label-flat').textContent = distFlat.toFixed(1) + ' km';
   document.getElementById('label-down').textContent = distDown.toFixed(1) + ' km';
+  document.getElementById('dur-up').textContent   = fmtDur(durUp);
+  document.getElementById('dur-flat').textContent = fmtDur(durFlat);
+  document.getElementById('dur-down').textContent = fmtDur(durDown);
 
   // Effort breakdown bars
   document.getElementById('bar-grav').style.width = (kjGrav/total*100) + '%';
