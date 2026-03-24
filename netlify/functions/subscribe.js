@@ -31,8 +31,7 @@ exports.handler = async (event) => {
           reactivate_existing: false,
           send_welcome_email: true,
           utm_source: 'calculateur-gpx',
-          utm_medium: 'landing-page',
-          automation_ids: [process.env.BEEHIIV_AUTOMATION_ID]
+          utm_medium: 'landing-page'
         })
       }
     );
