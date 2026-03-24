@@ -16,40 +16,61 @@ exports.handler = async (event) => {
 
   const BEEHIIV_API_KEY = process.env.BEEHIIV_API_KEY;
   const BEEHIIV_PUB_ID = process.env.BEEHIIV_PUB_ID;
+  const BEEHIIV_AUTOMATION_ID = process.env.BEEHIIV_AUTOMATION_ID;
+
+  const headers = {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${BEEHIIV_API_KEY}`
+  };
 
   try {
-    const res = await fetch(
+    // Étape 1 — Créer l'abonné
+    const subRes = await fetch(
       `https://api.beehiiv.com/v2/publications/${BEEHIIV_PUB_ID}/subscriptions`,
       {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${BEEHIIV_API_KEY}`
-        },
+        headers,
         body: JSON.stringify({
           email,
           reactivate_existing: false,
-          send_welcome_email: true,
+          send_welcome_email: false,
           utm_source: 'calculateur-gpx',
           utm_medium: 'landing-page'
         })
       }
     );
 
-    const data = await res.json().catch(() => ({}));
+    const subData = await subRes.json().catch(() => ({}));
 
-    if (res.ok || res.status === 201) {
+    if (!subRes.ok && subRes.status !== 201) {
+      console.error('Beehiiv subscribe error:', subRes.status, JSON.stringify(subData));
       return {
-        statusCode: 200,
-        body: JSON.stringify({ success: true })
+        statusCode: 500,
+        body: JSON.stringify({ error: 'Erreur création abonné', status: subRes.status, detail: subData })
       };
     }
 
-    console.error('Beehiiv error:', res.status, JSON.stringify(data));
+    // Étape 2 — Déclencher l'automation
+    const automationRes = await fetch(
+      `https://api.beehiiv.com/v2/publications/${BEEHIIV_PUB_ID}/automations/${BEEHIIV_AUTOMATION_ID}/journeys`,
+      {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ email })
+      }
+    );
+
+    const automationData = await automationRes.json().catch(() => ({}));
+
+    if (!automationRes.ok) {
+      console.error('Beehiiv automation error:', automationRes.status, JSON.stringify(automationData));
+    }
+
     return {
-      statusCode: 500,
-      body: JSON.stringify({ error: 'Erreur Beehiiv', status: res.status, detail: data })
+      statusCode: 200,
+      body: JSON.stringify({ success: true })
     };
+
   } catch (e) {
     console.error('Fetch error:', e.message);
     return {
