@@ -412,6 +412,60 @@
     margin-top: auto;
   }
 
+  /* CTA GF90 */
+  .cta-gf90 {
+    display: block;
+    background: var(--accent);
+    border: 2px solid var(--accent-dark);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    text-decoration: none;
+    color: #111;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+
+  .cta-gf90:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(245,225,0,0.5);
+  }
+
+  .cta-gf90 .cta-question {
+    font-size: 12px;
+    font-weight: 600;
+    color: rgba(0,0,0,0.65);
+    margin-bottom: 8px;
+    line-height: 1.4;
+  }
+
+  .cta-gf90 .cta-action {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 14px;
+    font-weight: 900;
+    color: #111;
+    letter-spacing: 0.01em;
+  }
+
+  .cta-gf90 .cta-arrow {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: #111;
+    color: var(--accent);
+    border-radius: 50%;
+    font-size: 16px;
+    font-weight: 900;
+    flex-shrink: 0;
+    transition: transform 0.15s;
+  }
+
+  .cta-gf90:hover .cta-arrow {
+    transform: translateX(3px);
+  }
+
   /* Responsive */
   @media (max-width: 768px) {
     .layout { grid-template-columns: 1fr; }
@@ -522,6 +576,14 @@
       Seuil montée/descente : pente &gt; ±2%<br>
       En descente : travail pédalé = 0
     </div>
+
+    <a class="cta-gf90" href="https://granfondo90.netlify.app/" target="_blank" rel="noopener">
+      <div class="cta-question">Tu veux réaliser le meilleur chrono possible ?</div>
+      <div class="cta-action">
+        <span>Rejoins GF90</span>
+        <span class="cta-arrow">→</span>
+      </div>
+    </a>
 
   </aside>
 
