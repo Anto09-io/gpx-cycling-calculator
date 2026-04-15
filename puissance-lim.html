@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Puissance Lim — LSDC Calculator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  :root {
+    --bg:          #F8F9FC;
+    --surface:     #FFFFFF;
+    --border:      #E8E8E8;
+    --border2:     #D0D0D0;
+    --text:        #111111;
+    --muted:       #555555;
+    --dim:         #999999;
+    --accent:      #F5E100;
+    --accent-dark: #C8B800;
+    --blue:        #2563EB;
+    --blue-soft:   rgba(37,99,235,0.10);
+    --blue-mid:    rgba(37,99,235,0.25);
+    --green:       #16A34A;
+    --orange:      #F97316;
+    --red:         #EF4444;
+    --font: 'Inter', sans-serif;
+    --radius: 10px;
+    --radius-lg: 14px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--font); font-size: 13px; line-height: 1.6; min-height: 100vh; -webkit-font-smoothing: antialiased; }
+
+  /* ── Header ─────────────────────────────────────────────────────── */
+  header { padding: 0 2rem; background: #0D0D0D; border-bottom: 1px solid #222; display: flex; align-items: center; justify-content: space-between; height: 64px; position: sticky; top: 0; z-index: 100; }
+  .header-left { display: flex; align-items: center; gap: 10px; text-decoration: none; flex-shrink: 0; }
+  .header-app-name { font-size: 15px; font-weight: 800; color: #fff; letter-spacing: -0.01em; }
+  .header-nav { display: flex; align-items: center; gap: 2px; }
+  .nav-tab { padding: 7px 16px; border-radius: 8px; font-size: 13px; font-weight: 500; color: #888; text-decoration: none; transition: color 0.15s, background 0.15s; white-space: nowrap; }
+  .nav-tab:hover { color: #fff; background: rgba(255,255,255,0.08); }
+  .nav-tab.active { color: #fff; background: rgba(255,255,255,0.12); }
+  .header-cta-btn { display: inline-flex; align-items: center; gap: 6px; background: var(--accent); color: #111; font-size: 13px; font-weight: 800; padding: 8px 18px; border-radius: 8px; text-decoration: none; transition: transform 0.15s, box-shadow 0.15s; white-space: nowrap; flex-shrink: 0; }
+  .header-cta-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 18px rgba(245,225,0,0.45); }
+
+  /* ── Page wrapper ────────────────────────────────────────────────── */
+  .page { max-width: 1280px; margin: 0 auto; padding: 0 1.5rem 3rem; }
+
+  /* ── 3-column grid ───────────────────────────────────────────────── */
+  .three-col { display: grid; grid-template-columns: 320px 1fr 280px; gap: 1.25rem; padding: 1.5rem 0 1rem; align-items: start; }
+  @media (max-width: 960px) { .three-col { grid-template-columns: 1fr; } }
+
+  /* ── Column titles ───────────────────────────────────────────────── */
+  .col-title { font-size: 10px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--dim); margin-bottom: 0.75rem; }
+
+  /* ── Cards ───────────────────────────────────────────────────────── */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.1rem 1.25rem; }
+  .card + .card { margin-top: 0.75rem; }
+
+  /* ── Record input cards ──────────────────────────────────────────── */
+  .record-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.85rem; }
+  .record-name { font-size: 13px; font-weight: 700; color: var(--text); }
+  .record-range { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; background: var(--blue-soft); color: var(--blue); padding: 3px 9px; border-radius: 100px; }
+  .record-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .inp-group label { font-size: 10px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; display: block; margin-bottom: 5px; }
+  .inp-wrap { position: relative; }
+  .inp-wrap input { width: 100%; padding: 8px 32px 8px 10px; border: 1.5px solid var(--border2); border-radius: 8px; font-family: var(--font); font-size: 14px; font-weight: 700; color: var(--text); background: #fff; outline: none; transition: border-color 0.15s; -moz-appearance: textfield; }
+  .inp-wrap input::-webkit-inner-spin-button, .inp-wrap input::-webkit-outer-spin-button { -webkit-appearance: none; }
+  .inp-wrap input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px var(--blue-soft); }
+  .inp-wrap input.inp-error { border-color: var(--red); }
+  .inp-wrap input.inp-ok { border-color: var(--green); }
+  .inp-unit { position: absolute; right: 9px; top: 50%; transform: translateY(-50%); font-size: 10px; font-weight: 700; color: var(--dim); pointer-events: none; }
+  .record-err { font-size: 10px; color: var(--red); margin-top: 6px; min-height: 14px; line-height: 1.4; }
+  .record-warn { font-size: 10px; color: var(--orange); margin-top: 6px; min-height: 14px; line-height: 1.4; }
+
+  /* ── Result cards ────────────────────────────────────────────────── */
+  .e-card { background: var(--blue); border-color: transparent; padding: 1.25rem 1.5rem; }
+  .e-label { font-size: 10px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255,255,255,0.55); margin-bottom: 0.5rem; }
+  .e-value { font-size: 52px; font-weight: 900; color: #fff; letter-spacing: -0.04em; line-height: 1; }
+  .e-profile { display: inline-flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.15); color: #fff; font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 100px; margin-top: 10px; }
+  .e-dot { width: 7px; height: 7px; border-radius: 50%; background: #fff; }
+
+  .mini-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+  .mini-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 0.85rem 1rem; }
+  .mc-label { font-size: 10px; color: var(--muted); font-weight: 500; margin-bottom: 4px; }
+  .mc-val { font-size: 22px; font-weight: 900; color: var(--text); letter-spacing: -0.02em; line-height: 1; }
+  .mc-unit { font-size: 10px; color: var(--dim); margin-top: 2px; }
+  .mc-note { font-size: 10px; margin-top: 4px; font-weight: 600; }
+  .mc-note.good { color: var(--green); }
+  .mc-note.warn { color: var(--orange); }
+  .mc-note.bad  { color: var(--red); }
+
+  .residuals-list { display: flex; flex-direction: column; gap: 7px; margin-top: 0.75rem; }
+  .res-row { display: flex; align-items: center; justify-content: space-between; font-size: 11px; }
+  .res-name { color: var(--muted); font-weight: 500; }
+  .res-val { font-weight: 700; display: flex; align-items: center; gap: 4px; }
+  .res-val.good { color: var(--green); }
+  .res-val.warn { color: var(--orange); }
+
+  /* ── Placeholder (no data) ───────────────────────────────────────── */
+  .placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 160px; color: var(--dim); text-align: center; gap: 6px; }
+  .placeholder .ph-icon { font-size: 28px; opacity: 0.25; }
+  .placeholder p { font-size: 11px; }
+
+  /* ── Calculator column ───────────────────────────────────────────── */
+  .calc-section { display: flex; flex-direction: column; gap: 0; }
+  .calc-section .card { border-radius: 0; border-bottom: none; }
+  .calc-section .card:first-child { border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
+  .calc-section .card:last-child  { border-radius: 0 0 var(--radius-lg) var(--radius-lg); border-bottom: 1px solid var(--border); }
+  .calc-mode-label { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; color: var(--dim); margin-bottom: 0.75rem; }
+  .calc-row { display: flex; align-items: center; gap: 8px; }
+  .calc-inp { flex: 1; padding: 8px 10px; border: 1.5px solid var(--border2); border-radius: 8px; font-family: var(--font); font-size: 13px; font-weight: 700; color: var(--text); background: #fff; outline: none; transition: border-color 0.15s; }
+  .calc-inp:focus { border-color: var(--blue); box-shadow: 0 0 0 3px var(--blue-soft); }
+  .calc-unit-badge { font-size: 10px; font-weight: 700; color: var(--dim); white-space: nowrap; }
+  .calc-result { margin-top: 0.75rem; padding: 0.6rem 0.85rem; background: var(--bg); border-radius: 8px; border: 1px solid var(--border); }
+  .calc-result-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--dim); margin-bottom: 2px; }
+  .calc-result-val { font-size: 24px; font-weight: 900; color: var(--blue); letter-spacing: -0.02em; line-height: 1; }
+  .calc-result-unit { font-size: 10px; color: var(--muted); margin-top: 1px; }
+  .calc-tte-pct { margin-top: 0.5rem; padding: 0.5rem 0.85rem; background: var(--blue-soft); border-radius: 8px; border: 1px solid var(--blue-mid); }
+  .tte-pct-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--blue); margin-bottom: 1px; }
+  .tte-pct-val { font-size: 20px; font-weight: 900; color: var(--blue); }
+
+  /* ── Chart section ───────────────────────────────────────────────── */
+  .chart-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.25rem 1.5rem; margin-top: 0; }
+  .chart-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+  .chart-title { font-size: 10px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--dim); }
+  .chart-legend { display: flex; gap: 1.25rem; align-items: center; }
+  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 10px; font-weight: 600; color: var(--muted); }
+  .legend-line { width: 18px; height: 3px; background: var(--blue); border-radius: 2px; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--orange); }
+  .chart-wrap { position: relative; width: 100%; height: 260px; }
+  .chart-empty { display: flex; align-items: center; justify-content: center; height: 260px; color: var(--dim); font-size: 12px; border: 1.5px dashed var(--border2); border-radius: var(--radius); }
+
+  /* ── Global warning banner ───────────────────────────────────────── */
+  .global-warn { background: #FFF7ED; border: 1px solid #FED7AA; border-radius: var(--radius); padding: 8px 14px; font-size: 11px; color: #92400E; font-weight: 600; margin-bottom: 0.75rem; display: none; }
+  .global-warn.show { display: flex; align-items: center; gap: 6px; }
+</style>
+</head>
+<body>
+
+<!-- ── HEADER ──────────────────────────────────────────────────────── -->
+<header>
+  <a class="header-left" href="calculateur lsdc.html">
+    <svg width="24" height="22" viewBox="0 0 24 22" fill="none">
+      <rect x="0"    y="13" width="5"   height="9"  rx="1.5" fill="#22C55E"/>
+      <rect x="6.5"  y="7"  width="5"   height="15" rx="1.5" fill="#F5E100"/>
+      <rect x="13"   y="10" width="5"   height="12" rx="1.5" fill="#3B82F6"/>
+      <rect x="19.5" y="2"  width="4.5" height="20" rx="1.5" fill="#EF4444"/>
+    </svg>
+    <span class="header-app-name">LSDC Calculator</span>
+  </a>
+  <nav class="header-nav">
+    <a class="nav-tab"        href="calculateur lsdc.html">Calculateur GPX</a>
+    <a class="nav-tab"        href="perf-segment.html">Perf segment</a>
+    <a class="nav-tab active" href="puissance-lim.html">Puissance Lim</a>
+  </nav>
+  <a class="header-cta-btn" href="https://granfondo90.netlify.app/" target="_blank" rel="noopener">
+    Rejoins GF90 →
+  </a>
+</header>
+
+<div class="page">
+
+  <div class="three-col">
+
+    <!-- ── COL 1 : Saisie ─────────────────────────────────────────── -->
+    <div>
+      <div class="col-title">Vos records personnels</div>
+
+      <!-- Record court -->
+      <div class="card" id="card1">
+        <div class="record-header">
+          <span class="record-name">Record court</span>
+          <span class="record-range">3 – 7 min</span>
+        </div>
+        <div class="record-inputs">
+          <div class="inp-group">
+            <label>Puissance</label>
+            <div class="inp-wrap">
+              <input type="number" id="p1" placeholder="380" min="50" max="2000" step="1">
+              <span class="inp-unit">W</span>
+            </div>
+          </div>
+          <div class="inp-group">
+            <label>Durée</label>
+            <div class="inp-wrap">
+              <input type="text" id="t1" placeholder="5:00">
+              <span class="inp-unit">min</span>
+            </div>
+          </div>
+        </div>
+        <div class="record-err" id="err1"></div>
+      </div>
+
+      <!-- Record intermédiaire -->
+      <div class="card" id="card2">
+        <div class="record-header">
+          <span class="record-name">Record intermédiaire</span>
+          <span class="record-range">20 – 30 min</span>
+        </div>
+        <div class="record-inputs">
+          <div class="inp-group">
+            <label>Puissance</label>
+            <div class="inp-wrap">
+              <input type="number" id="p2" placeholder="295" min="50" max="2000" step="1">
+              <span class="inp-unit">W</span>
+            </div>
+          </div>
+          <div class="inp-group">
+            <label>Durée</label>
+            <div class="inp-wrap">
+              <input type="text" id="t2" placeholder="20:00">
+              <span class="inp-unit">min</span>
+            </div>
+          </div>
+        </div>
+        <div class="record-err" id="err2"></div>
+      </div>
+
+      <!-- Record long -->
+      <div class="card" id="card3">
+        <div class="record-header">
+          <span class="record-name">Record long</span>
+          <span class="record-range">≥ 60 min</span>
+        </div>
+        <div class="record-inputs">
+          <div class="inp-group">
+            <label>Puissance</label>
+            <div class="inp-wrap">
+              <input type="number" id="p3" placeholder="265" min="50" max="2000" step="1">
+              <span class="inp-unit">W</span>
+            </div>
+          </div>
+          <div class="inp-group">
+            <label>Durée</label>
+            <div class="inp-wrap">
+              <input type="text" id="t3" placeholder="1:00:00">
+              <span class="inp-unit">hh:mm</span>
+            </div>
+          </div>
+        </div>
+        <div class="record-err" id="err3"></div>
+      </div>
+
+      <!-- Mono error -->
+      <div class="record-err" id="err-mono" style="margin-top:6px; padding: 0 4px;"></div>
+
+      <div style="margin-top:1rem; font-size:10px; color:var(--dim); line-height:1.7;">
+        Durée : format <strong>mm:ss</strong> ou <strong>hh:mm:ss</strong> ou <strong>décimal</strong> (ex: 22.5 = 22 min 30 s)<br>
+        Modèle : Power Law de Riegel (régression log-log)
+      </div>
+    </div>
+
+    <!-- ── COL 2 : Résultats ───────────────────────────────────────── -->
+    <div>
+      <div class="col-title">Profil de puissance</div>
+      <div id="global-warn" class="global-warn">⚠ R² faible — vérifiez que vos records sont bien maximaux</div>
+
+      <!-- E index card -->
+      <div class="card e-card" id="e-card">
+        <div class="e-label">Indice d'endurance (E)</div>
+        <div class="e-value" id="e-val">—</div>
+        <div id="e-profile" class="e-profile" style="display:none">
+          <div class="e-dot" id="e-dot"></div>
+          <span id="e-profile-label">—</span>
+        </div>
+        <div id="e-placeholder" class="placeholder" style="margin-top:0.5rem;">
+          <div class="ph-icon">⚡</div>
+          <p>Entrez vos trois records pour calculer votre profil</p>
+        </div>
+      </div>
+
+      <!-- P60 + R² -->
+      <div class="mini-grid" style="margin-top:0.75rem;">
+        <div class="mini-card">
+          <div class="mc-label">P60 — FTP modélisée</div>
+          <div class="mc-val" id="p60-val">—</div>
+          <div class="mc-unit">watts</div>
+        </div>
+        <div class="mini-card">
+          <div class="mc-label">R² — qualité du modèle</div>
+          <div class="mc-val" id="r2-val">—</div>
+          <div class="mc-note" id="r2-note"></div>
+        </div>
+      </div>
+
+      <!-- Résidus -->
+      <div class="card" style="margin-top:0.75rem;">
+        <div class="col-title" style="margin-bottom:0.6rem;">Résidus par point</div>
+        <div class="residuals-list">
+          <div class="res-row">
+            <span class="res-name">Record court</span>
+            <span class="res-val" id="res1">—</span>
+          </div>
+          <div class="res-row">
+            <span class="res-name">Record intermédiaire</span>
+            <span class="res-val" id="res2">—</span>
+          </div>
+          <div class="res-row">
+            <span class="res-name">Record long</span>
+            <span class="res-val" id="res3">—</span>
+          </div>
+        </div>
+        <div style="margin-top:0.6rem; font-size:10px; color:var(--dim);">
+          Résidu &gt; ±5% → effort potentiellement sous-maximal
+        </div>
+      </div>
+    </div>
+
+    <!-- ── COL 3 : Calculateur ────────────────────────────────────── -->
+    <div>
+      <div class="col-title">Calculateur de chrono</div>
+      <div class="calc-section">
+
+        <!-- Mode A : durée → puissance -->
+        <div class="card">
+          <div class="calc-mode-label">Durée → Puissance prédite</div>
+          <div class="calc-row">
+            <input type="text" class="calc-inp" id="calc-dur" placeholder="1:30:00">
+            <span class="calc-unit-badge">durée</span>
+          </div>
+          <div class="calc-result" id="calc-a-result" style="display:none;">
+            <div class="calc-result-label">Puissance prédite</div>
+            <div class="calc-result-val" id="calc-a-val">—</div>
+            <div class="calc-result-unit">watts</div>
+          </div>
+        </div>
+
+        <!-- Mode B : puissance → TTE -->
+        <div class="card">
+          <div class="calc-mode-label">Puissance → TTE prédit</div>
+          <div class="calc-row">
+            <input type="number" class="calc-inp" id="calc-pow" placeholder="280" min="50" max="2000" step="1">
+            <span class="calc-unit-badge">W</span>
+          </div>
+          <div class="calc-result" id="calc-b-result" style="display:none;">
+            <div class="calc-result-label">Temps d'effort maximal</div>
+            <div class="calc-result-val" id="calc-b-val">—</div>
+            <div class="calc-result-unit">durée</div>
+          </div>
+        </div>
+
+        <!-- % TTE (both filled) -->
+        <div class="card" id="calc-pct-card" style="display:none;">
+          <div class="tte-pct-label">% du TTE à cette puissance</div>
+          <div class="tte-pct-val" id="calc-pct-val">—</div>
+          <div style="font-size:10px; color:var(--blue); margin-top:2px; opacity:0.7;">durée / TTE × 100</div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ── CHART ──────────────────────────────────────────────────────── -->
+  <div class="chart-card">
+    <div class="chart-header">
+      <span class="chart-title">Courbe PPR théorique — Power Law</span>
+      <div class="chart-legend">
+        <div class="legend-item"><div class="legend-line"></div> Modèle</div>
+        <div class="legend-item"><div class="legend-dot"></div> Records réels</div>
+      </div>
+    </div>
+    <div id="chart-empty" class="chart-empty">Entrez vos trois records pour afficher la courbe</div>
+    <div class="chart-wrap" id="chart-wrap" style="display:none;">
+      <canvas id="ppr-chart"></canvas>
+    </div>
+  </div>
+
+</div><!-- end .page -->
+
+<script>
+// ── Model globals ────────────────────────────────────────────────────
+let model = null; // { E, S, R2, residuals, points }
+let pprChart = null;
+
+// ── Duration parsing ─────────────────────────────────────────────────
+// Accepts: "5:00" (mm:ss), "1:20:00" (hh:mm:ss), "22.5" (decimal minutes)
+function parseDuration(str) {
+  if (!str || !str.trim()) return null;
+  str = str.trim();
+  if (str.includes(':')) {
+    const parts = str.split(':').map(Number);
+    if (parts.some(isNaN) || parts.some(v => v < 0)) return null;
+    if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+    if (parts.length === 2) return parts[0] * 60 + parts[1];
+    return null;
+  }
+  const v = parseFloat(str);
+  if (isNaN(v) || v <= 0) return null;
+  return v * 60; // decimal minutes → seconds
+}
+
+// ── Duration formatting ──────────────────────────────────────────────
+function fmtSec(s) {
+  if (!s || isNaN(s) || s === Infinity) return '—';
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = Math.round(s % 60);
+  if (h > 0) return `${h}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+  return `${m}:${String(sec).padStart(2,'0')}`;
+}
+
+function fmtSecChart(s) {
+  if (s < 3600) {
+    const m = Math.floor(s / 60), sec = Math.round(s % 60);
+    return sec > 0 ? `${m}min ${sec}s` : `${m} min`;
+  }
+  const h = Math.floor(s / 3600), m = Math.round((s % 3600) / 60);
+  return m > 0 ? `${h}h ${m}min` : `${h}h`;
+}
+
+// ── Core math ────────────────────────────────────────────────────────
+function computeModel(points) {
+  const xs = points.map(p => Math.log(p.T));
+  const ys = points.map(p => Math.log(p.P));
+  const n  = xs.length;
+  const sx  = xs.reduce((a,b) => a+b, 0);
+  const sy  = ys.reduce((a,b) => a+b, 0);
+  const sxy = xs.reduce((acc,x,i) => acc + x*ys[i], 0);
+  const sx2 = xs.reduce((acc,x) => acc + x*x, 0);
+  const slope = (n*sxy - sx*sy) / (n*sx2 - sx*sx);
+  const intercept = (sy - slope*sx) / n;
+  return { E: slope + 1, S: Math.exp(intercept) };
+}
+
+function computeR2(points, S, E) {
+  const ys   = points.map(p => Math.log(p.P));
+  const yMean = ys.reduce((a,b) => a+b, 0) / ys.length;
+  const ssTot = ys.reduce((acc,y) => acc + (y-yMean)**2, 0);
+  const ssRes = points.reduce((acc,p) => {
+    const yPred = Math.log(S) + (E-1)*Math.log(p.T);
+    return acc + (Math.log(p.P) - yPred)**2;
+  }, 0);
+  return 1 - ssRes/ssTot;
+}
+
+function residualPct(point, S, E) {
+  const predicted = S * Math.pow(point.T, E-1);
+  return (point.P - predicted) / predicted * 100;
+}
+
+function powerAtT(T, S, E) { return S * Math.pow(T, E-1); }
+
+function tte(P, S, E) {
+  if (E >= 1 || P <= 0) return Infinity;
+  return Math.pow(S/P, 1/(1-E));
+}
+
+function getProfile(E) {
+  if (E < 0.88) return { label:'Sprinteur',         color:'#EF4444' };
+  if (E < 0.92) return { label:'All-round',          color:'#F97316' };
+  if (E < 0.95) return { label:'Rouleur-grimpeur',   color:'#22C55E' };
+  return         { label:'Ultra-endurance',          color:'#2563EB' };
+}
+
+// ── Chart init ───────────────────────────────────────────────────────
+function initChart() {
+  const ctx = document.getElementById('ppr-chart').getContext('2d');
+  pprChart = new Chart(ctx, {
+    type: 'scatter',
+    data: { datasets: [] },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 300 },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#111',
+          borderColor: 'rgba(37,99,235,0.3)',
+          borderWidth: 1,
+          titleColor: '#999',
+          bodyColor: '#fff',
+          titleFont: { family: 'Inter', size: 10 },
+          bodyFont: { family: 'Inter', size: 12 },
+          padding: 10,
+          callbacks: {
+            title: items => 'Durée : ' + fmtSecChart(items[0].parsed.x),
+            label: ctx => {
+              if (ctx.datasetIndex === 1) {
+                const { x: T, y: P } = ctx.parsed;
+                if (model) {
+                  const res = residualPct({T, P}, model.S, model.E);
+                  const sign = res >= 0 ? '+' : '';
+                  return `Record : ${Math.round(P)} W  (résidu ${sign}${res.toFixed(1)}%)`;
+                }
+                return `Record : ${Math.round(P)} W`;
+              }
+              return `Prédit : ${Math.round(ctx.parsed.y)} W`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          type: 'logarithmic',
+          min: 180,
+          max: 21600,
+          afterBuildTicks: axis => {
+            axis.ticks = [180, 300, 600, 1200, 1800, 3600, 7200, 14400, 21600].map(v => ({value: v}));
+          },
+          ticks: {
+            color: '#999',
+            font: { family: 'Inter', size: 10 },
+            maxRotation: 0,
+            callback: v => ({180:'3 min',300:'5 min',600:'10 min',1200:'20 min',1800:'30 min',3600:'1 h',7200:'2 h',14400:'4 h',21600:'6 h'})[v] ?? ''
+          },
+          grid: { color: 'rgba(0,0,0,0.05)' },
+          border: { color: '#E8E8E8' }
+        },
+        y: {
+          ticks: {
+            color: '#999', font: { family: 'Inter', size: 10 },
+            callback: v => v + ' W'
+          },
+          grid: { color: 'rgba(0,0,0,0.05)' },
+          border: { color: '#E8E8E8' }
+        }
+      }
+    }
+  });
+}
+
+function updateChart() {
+  if (!model || !pprChart) return;
+  const { S, E, points } = model;
+
+  // Generate smooth curve (100 pts on log scale)
+  const logMin = Math.log(180), logMax = Math.log(21600);
+  const curve = [];
+  for (let i = 0; i <= 120; i++) {
+    const T = Math.exp(logMin + (logMax - logMin) * i / 120);
+    curve.push({ x: T, y: powerAtT(T, S, E) });
+  }
+
+  pprChart.data.datasets = [
+    {
+      label: 'Courbe PPR',
+      data: curve,
+      showLine: true,
+      borderColor: '#2563EB',
+      borderWidth: 2,
+      pointRadius: 0,
+      fill: false,
+      tension: 0
+    },
+    {
+      label: 'Records',
+      data: points.map(p => ({ x: p.T, y: p.P })),
+      backgroundColor: '#F97316',
+      borderColor: '#fff',
+      borderWidth: 2.5,
+      pointRadius: 7,
+      pointHoverRadius: 9
+    }
+  ];
+  pprChart.update();
+}
+
+// ── UI helpers ───────────────────────────────────────────────────────
+function setErr(id, msg) {
+  const el = document.getElementById(id);
+  el.className = msg ? 'record-err' : 'record-err';
+  el.textContent = msg || '';
+}
+
+function setInputState(id, state) {
+  const el = document.getElementById(id);
+  el.classList.remove('inp-ok', 'inp-error');
+  if (state) el.classList.add(state);
+}
+
+function clearResults() {
+  document.getElementById('e-val').textContent        = '—';
+  document.getElementById('e-profile').style.display  = 'none';
+  document.getElementById('e-placeholder').style.display = 'flex';
+  document.getElementById('p60-val').textContent      = '—';
+  document.getElementById('r2-val').textContent       = '—';
+  document.getElementById('r2-note').textContent      = '';
+  document.getElementById('r2-note').className        = 'mc-note';
+  ['res1','res2','res3'].forEach(id => {
+    const el = document.getElementById(id);
+    el.textContent = '—';
+    el.className = 'res-val';
+  });
+  document.getElementById('global-warn').classList.remove('show');
+  document.getElementById('chart-wrap').style.display  = 'none';
+  document.getElementById('chart-empty').style.display = 'flex';
+  model = null;
+  updateCalculatorDisplay();
+}
+
+function updateCalculatorDisplay() {
+  const durStr = document.getElementById('calc-dur').value.trim();
+  const powStr = document.getElementById('calc-pow').value.trim();
+  const durT   = parseDuration(durStr);
+  const powP   = parseFloat(powStr);
+
+  // Mode A
+  const aRes = document.getElementById('calc-a-result');
+  if (model && durT) {
+    const p = powerAtT(durT, model.S, model.E);
+    document.getElementById('calc-a-val').textContent = Math.round(p);
+    aRes.style.display = 'block';
+  } else {
+    aRes.style.display = 'none';
+  }
+
+  // Mode B
+  const bRes = document.getElementById('calc-b-result');
+  if (model && !isNaN(powP) && powP > 0) {
+    const t = tte(powP, model.S, model.E);
+    document.getElementById('calc-b-val').textContent = t === Infinity ? '∞' : fmtSec(t);
+    bRes.style.display = 'block';
+  } else {
+    bRes.style.display = 'none';
+  }
+
+  // % TTE (both filled)
+  const pctCard = document.getElementById('calc-pct-card');
+  if (model && durT && !isNaN(powP) && powP > 0) {
+    const t   = tte(powP, model.S, model.E);
+    const pct = t === Infinity ? 0 : (durT / t * 100);
+    document.getElementById('calc-pct-val').textContent = pct.toFixed(1) + ' %';
+    pctCard.style.display = 'block';
+  } else {
+    pctCard.style.display = 'none';
+  }
+}
+
+// ── Main update ──────────────────────────────────────────────────────
+function updateAll() {
+  const p1v = parseFloat(document.getElementById('p1').value);
+  const p2v = parseFloat(document.getElementById('p2').value);
+  const p3v = parseFloat(document.getElementById('p3').value);
+  const t1v = parseDuration(document.getElementById('t1').value);
+  const t2v = parseDuration(document.getElementById('t2').value);
+  const t3v = parseDuration(document.getElementById('t3').value);
+
+  let anyErr = false;
+
+  // Validate record 1 (3–7 min = 180–420 s)
+  let e1 = '';
+  if (document.getElementById('p1').value && isNaN(p1v)) e1 = 'Puissance invalide.';
+  if (document.getElementById('t1').value && t1v === null) e1 = 'Format durée invalide.';
+  if (t1v !== null && (t1v < 180 || t1v > 420)) e1 = `Durée hors plage (3–7 min). Actuel : ${fmtSec(t1v)}`;
+  setErr('err1', e1);
+  setInputState('t1', e1 ? 'inp-error' : (t1v ? 'inp-ok' : ''));
+  setInputState('p1', (!e1 && p1v > 0) ? 'inp-ok' : (isNaN(p1v) && document.getElementById('p1').value ? 'inp-error' : ''));
+  if (e1) anyErr = true;
+
+  // Validate record 2 (20–30 min = 1200–1800 s)
+  let e2 = '';
+  if (document.getElementById('p2').value && isNaN(p2v)) e2 = 'Puissance invalide.';
+  if (document.getElementById('t2').value && t2v === null) e2 = 'Format durée invalide.';
+  if (t2v !== null && (t2v < 1200 || t2v > 1800)) e2 = `Durée hors plage (20–30 min). Actuel : ${fmtSec(t2v)}`;
+  setErr('err2', e2);
+  setInputState('t2', e2 ? 'inp-error' : (t2v ? 'inp-ok' : ''));
+  setInputState('p2', (!e2 && p2v > 0) ? 'inp-ok' : (isNaN(p2v) && document.getElementById('p2').value ? 'inp-error' : ''));
+  if (e2) anyErr = true;
+
+  // Validate record 3 (≥ 60 min = 3600 s)
+  let e3 = '';
+  if (document.getElementById('p3').value && isNaN(p3v)) e3 = 'Puissance invalide.';
+  if (document.getElementById('t3').value && t3v === null) e3 = 'Format durée invalide.';
+  if (t3v !== null && t3v < 3600) e3 = `Durée minimale : 60 min. Actuel : ${fmtSec(t3v)}`;
+  setErr('err3', e3);
+  setInputState('t3', e3 ? 'inp-error' : (t3v ? 'inp-ok' : ''));
+  setInputState('p3', (!e3 && p3v > 0) ? 'inp-ok' : (isNaN(p3v) && document.getElementById('p3').value ? 'inp-error' : ''));
+  if (e3) anyErr = true;
+
+  // Check all present and valid
+  if (anyErr || !p1v || !p2v || !p3v || !t1v || !t2v || !t3v) {
+    clearResults();
+    return;
+  }
+
+  // Monotonicity check
+  const monoEl = document.getElementById('err-mono');
+  if (!(p1v > p2v && p2v > p3v)) {
+    monoEl.textContent = '⚠ La puissance doit décroître avec la durée (P court > P interm. > P long).';
+    clearResults();
+    return;
+  }
+  monoEl.textContent = '';
+
+  // Compute model
+  const points = [{T: t1v, P: p1v}, {T: t2v, P: p2v}, {T: t3v, P: p3v}];
+  const { E, S } = computeModel(points);
+  const R2       = computeR2(points, S, E);
+  const P60      = powerAtT(3600, S, E);
+  const residuals = points.map(p => residualPct(p, S, E));
+
+  model = { E, S, R2, residuals, points };
+
+  // ── Display E
+  document.getElementById('e-val').textContent = E.toFixed(4);
+  document.getElementById('e-placeholder').style.display = 'none';
+  const prof = getProfile(E);
+  const profEl = document.getElementById('e-profile');
+  profEl.style.display = 'inline-flex';
+  document.getElementById('e-dot').style.background   = prof.color;
+  document.getElementById('e-profile-label').textContent = prof.label;
+
+  // ── Display P60
+  document.getElementById('p60-val').textContent = Math.round(P60);
+
+  // ── Display R²
+  const r2El    = document.getElementById('r2-val');
+  const r2Note  = document.getElementById('r2-note');
+  r2El.textContent = R2.toFixed(4);
+  if (R2 >= 0.999) {
+    r2Note.textContent = 'Excellent';
+    r2Note.className   = 'mc-note good';
+    document.getElementById('global-warn').classList.remove('show');
+  } else if (R2 >= 0.99) {
+    r2Note.textContent = 'Bon';
+    r2Note.className   = 'mc-note warn';
+    document.getElementById('global-warn').classList.remove('show');
+  } else {
+    r2Note.textContent = 'Faible ⚠';
+    r2Note.className   = 'mc-note bad';
+    document.getElementById('global-warn').classList.add('show');
+  }
+
+  // ── Display residuals
+  ['res1','res2','res3'].forEach((id, i) => {
+    const el  = document.getElementById(id);
+    const res = residuals[i];
+    const sign = res >= 0 ? '+' : '';
+    const abs  = Math.abs(res);
+    el.textContent = `${sign}${res.toFixed(1)}%`;
+    if (abs <= 5) {
+      el.className = 'res-val good';
+      el.textContent += ' ✓';
+    } else {
+      el.className = 'res-val warn';
+      el.textContent += ' ⚠';
+    }
+  });
+
+  // ── Show chart
+  document.getElementById('chart-empty').style.display = 'none';
+  document.getElementById('chart-wrap').style.display  = 'block';
+  if (!pprChart) initChart();
+  updateChart();
+
+  // ── Update calculator
+  updateCalculatorDisplay();
+}
+
+// ── Event listeners ──────────────────────────────────────────────────
+['p1','t1','p2','t2','p3','t3'].forEach(id =>
+  document.getElementById(id).addEventListener('input', updateAll)
+);
+
+['calc-dur','calc-pow'].forEach(id =>
+  document.getElementById(id).addEventListener('input', updateCalculatorDisplay)
+);
+</script>
+</body>
+</html>

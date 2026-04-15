@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Perf Segment — LSDC Calculator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:           #FFFFFF;
+    --surface:      #FAFAFA;
+    --surface2:     #F4F4F4;
+    --border:       #E8E8E8;
+    --border2:      #D0D0D0;
+    --text:         #111111;
+    --muted:        #555555;
+    --dim:          #999999;
+    --accent:       #F5E100;
+    --accent-dark:  #C8B800;
+    --accent-soft:  rgba(245,225,0,0.15);
+    --accent2:      #16A34A;
+    --accent2-soft: rgba(22,163,74,0.10);
+    --accent3:      #2563EB;
+    --accent3-soft: rgba(37,99,235,0.10);
+    --font: 'Inter', sans-serif;
+    --radius: 10px;
+    --radius-lg: 16px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 13px;
+    line-height: 1.6;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── Header ─────────────────────────────────────────────────────── */
+  header {
+    padding: 0 2rem;
+    background: #0D0D0D;
+    border-bottom: 1px solid #222;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 64px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header-left { display: flex; align-items: center; gap: 10px; text-decoration: none; flex-shrink: 0; }
+  .header-app-name { font-size: 15px; font-weight: 800; color: #fff; letter-spacing: -0.01em; }
+  .header-nav { display: flex; align-items: center; gap: 2px; }
+  .nav-tab {
+    padding: 7px 16px; border-radius: 8px; font-size: 13px; font-weight: 500;
+    color: #888; text-decoration: none; transition: color 0.15s, background 0.15s; white-space: nowrap;
+  }
+  .nav-tab:hover { color: #fff; background: rgba(255,255,255,0.08); }
+  .nav-tab.active { color: #fff; background: rgba(255,255,255,0.12); }
+  .header-cta-btn {
+    display: inline-flex; align-items: center; gap: 6px; background: var(--accent);
+    color: #111; font-size: 13px; font-weight: 800; padding: 8px 18px; border-radius: 8px;
+    text-decoration: none; transition: transform 0.15s, box-shadow 0.15s; white-space: nowrap; flex-shrink: 0;
+  }
+  .header-cta-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 18px rgba(245,225,0,0.45); }
+
+  /* ── Layout ─────────────────────────────────────────────────────── */
+  .layout {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    min-height: calc(100vh - 64px);
+  }
+  .sidebar {
+    border-right: 1px solid var(--border);
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    background: var(--surface);
+  }
+  .main {
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  /* ── Section labels ──────────────────────────────────────────────── */
+  .section-label {
+    font-size: 10px; font-weight: 800; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--dim); margin-bottom: 0.75rem;
+  }
+
+  /* ── Upload zone ─────────────────────────────────────────────────── */
+  .upload-zone {
+    border: 1.5px dashed var(--border2); border-radius: var(--radius);
+    padding: 1.4rem 1rem; text-align: center; cursor: pointer;
+    transition: border-color 0.2s, background 0.2s; position: relative; background: #fff;
+  }
+  .upload-zone:hover, .upload-zone.drag-over { border-color: var(--accent-dark); background: var(--accent-soft); }
+  .upload-zone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+  .upload-icon {
+    width: 30px; height: 30px; margin: 0 auto 0.5rem; border: 1.5px solid var(--border2);
+    border-radius: 7px; display: flex; align-items: center; justify-content: center;
+    color: var(--text); font-size: 15px; background: var(--accent);
+  }
+  .upload-zone .upload-title { font-weight: 700; font-size: 12px; color: var(--text); margin-bottom: 2px; }
+  .upload-zone .upload-sub { font-size: 10px; color: var(--muted); }
+  .upload-zone.loaded { border-color: var(--accent-dark); background: var(--accent-soft); }
+  .upload-optional {
+    font-size: 10px; color: var(--dim); text-align: center; margin-top: 0.4rem; font-style: italic;
+  }
+
+  /* ── Sliders ─────────────────────────────────────────────────────── */
+  .slider-group { display: flex; flex-direction: column; gap: 10px; }
+  .slider-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; }
+  .slider-row label { font-size: 11px; color: var(--muted); margin-bottom: 4px; display: block; font-weight: 500; }
+  .slider-val { font-size: 13px; font-weight: 800; color: var(--text); min-width: 60px; text-align: right; padding-top: 16px; }
+  input[type="range"] {
+    -webkit-appearance: none; width: 100%; height: 3px;
+    background: var(--border2); border-radius: 2px; outline: none;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%;
+    background: var(--accent); cursor: pointer; border: 2px solid #111; transition: transform 0.15s;
+  }
+  input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+
+  /* ── Road condition toggle ───────────────────────────────────────── */
+  .road-toggle { display: flex; gap: 5px; margin-top: 0.4rem; }
+  .road-btn {
+    flex: 1; padding: 7px 4px; border-radius: 7px; border: 1.5px solid var(--border2);
+    background: #fff; font-size: 10px; font-weight: 700; color: var(--muted);
+    cursor: pointer; text-align: center; transition: all 0.15s; line-height: 1.3;
+  }
+  .road-btn:hover { border-color: var(--accent-dark); color: var(--text); background: var(--accent-soft); }
+  .road-btn.active { background: var(--accent); border-color: var(--accent-dark); color: #111; }
+
+  /* ── Segment stats ───────────────────────────────────────────────── */
+  .seg-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+  .stat-card {
+    background: #fff; border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px;
+  }
+  .stat-card .sc-label { font-size: 10px; color: var(--muted); margin-bottom: 3px; font-weight: 500; }
+  .stat-card .sc-val { font-size: 20px; font-weight: 900; color: var(--text); line-height: 1; letter-spacing: -0.02em; }
+  .stat-card .sc-unit { font-size: 10px; color: var(--dim); margin-top: 2px; }
+
+  /* ── Result cards ────────────────────────────────────────────────── */
+  .results-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+  .result-card {
+    background: #fff; border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 1rem 1.1rem; transition: border-color 0.2s;
+  }
+  .result-card.primary { background: var(--accent); border-color: var(--accent-dark); }
+  .result-card .rc-label { font-size: 10px; color: var(--muted); margin-bottom: 6px; letter-spacing: 0.05em; text-transform: uppercase; font-weight: 600; }
+  .result-card.primary .rc-label { color: rgba(0,0,0,0.5); }
+  .result-card .rc-val { font-size: 26px; font-weight: 900; color: var(--text); line-height: 1; letter-spacing: -0.02em; }
+  .result-card.primary .rc-val { color: #111; }
+  .result-card .rc-unit { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .result-card.primary .rc-unit { color: rgba(0,0,0,0.45); }
+
+  /* ── Breakdown section ───────────────────────────────────────────── */
+  .breakdown-section {
+    background: #fff; border: 1px solid var(--border); border-radius: var(--radius); padding: 1.1rem 1.25rem;
+  }
+  .breakdown-bars { display: flex; flex-direction: column; gap: 10px; margin-top: 0.75rem; }
+  .breakdown-row { display: grid; grid-template-columns: 120px 1fr 80px; align-items: center; gap: 10px; }
+  .b-name { font-size: 11px; color: var(--muted); font-weight: 500; }
+  .b-track { height: 5px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+  .b-fill { height: 100%; border-radius: 3px; transition: width 0.4s cubic-bezier(0.4,0,0.2,1); }
+  .b-fill.grav { background: var(--accent2); }
+  .b-fill.aero { background: var(--accent3); }
+  .b-fill.roll { background: #111; }
+  .b-kj { font-size: 11px; color: var(--text); text-align: right; font-weight: 600; }
+
+  /* ── Empty state ─────────────────────────────────────────────────── */
+  .empty-state {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    height: 280px; color: var(--muted); gap: 0.5rem; text-align: center;
+    border: 1.5px dashed var(--border); border-radius: var(--radius); background: var(--surface);
+  }
+  .empty-state .es-icon { font-size: 30px; opacity: 0.2; margin-bottom: 0.25rem; }
+  .empty-state p { font-size: 12px; }
+
+  /* ── Hypotheses ──────────────────────────────────────────────────── */
+  .hypo {
+    font-size: 10px; color: var(--dim); line-height: 1.7;
+    border-top: 1px solid var(--border); padding-top: 1rem; margin-top: auto;
+  }
+
+  /* ── Responsive ──────────────────────────────────────────────────── */
+  @media (max-width: 768px) {
+    .layout { grid-template-columns: 1fr; }
+    .sidebar { border-right: none; border-bottom: 1px solid var(--border); }
+    .results-grid { grid-template-columns: repeat(2, 1fr); }
+    .seg-stats { grid-template-columns: repeat(3, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── HEADER ──────────────────────────────────────────────────────── -->
+<header>
+  <a class="header-left" href="calculateur lsdc.html">
+    <svg width="24" height="22" viewBox="0 0 24 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="0"    y="13" width="5"   height="9"  rx="1.5" fill="#22C55E"/>
+      <rect x="6.5"  y="7"  width="5"   height="15" rx="1.5" fill="#F5E100"/>
+      <rect x="13"   y="10" width="5"   height="12" rx="1.5" fill="#3B82F6"/>
+      <rect x="19.5" y="2"  width="4.5" height="20" rx="1.5" fill="#EF4444"/>
+    </svg>
+    <span class="header-app-name">LSDC Calculator</span>
+  </a>
+  <nav class="header-nav">
+    <a class="nav-tab"        href="calculateur lsdc.html">Calculateur GPX</a>
+    <a class="nav-tab active" href="perf-segment.html">Perf segment</a>
+    <a class="nav-tab"        href="puissance-lim.html">Puissance Lim</a>
+  </nav>
+  <a class="header-cta-btn" href="https://granfondo90.netlify.app/" target="_blank" rel="noopener">
+    Rejoins GF90 →
+  </a>
+</header>
+
+<div class="layout">
+
+  <!-- ── SIDEBAR ───────────────────────────────────────────────────── -->
+  <aside class="sidebar">
+
+    <!-- Segment -->
+    <div>
+      <div class="section-label">Votre segment</div>
+
+      <div class="upload-zone" id="dropzone">
+        <input type="file" id="gpx-input" accept=".gpx">
+        <div class="upload-icon">↑</div>
+        <div class="upload-title" id="upload-title">Déposer un fichier GPX</div>
+        <div class="upload-sub"   id="upload-sub">ou cliquer pour parcourir</div>
+      </div>
+      <div class="upload-optional">facultatif — ou saisir manuellement ci-dessous</div>
+    </div>
+
+    <div class="slider-group">
+      <div class="slider-row">
+        <div>
+          <label>Distance de la bosse</label>
+          <input type="range" min="0.5" max="80" value="10" step="0.5" id="seg-dist">
+        </div>
+        <div class="slider-val" id="seg-dist-out">10 km</div>
+      </div>
+      <div class="slider-row">
+        <div>
+          <label>Dénivelé total (D+)</label>
+          <input type="range" min="20" max="3000" value="500" step="10" id="seg-dplus">
+        </div>
+        <div class="slider-val" id="seg-dplus-out">500 m</div>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-label" style="margin-bottom:0.5rem;">État du bitume</div>
+      <div class="road-toggle">
+        <button class="road-btn active" data-cr="0.003" id="road-parfait">Parfait</button>
+        <button class="road-btn"        data-cr="0.005" id="road-moyen">Moyen</button>
+        <button class="road-btn"        data-cr="0.010" id="road-chevre">Route de chèvre</button>
+      </div>
+    </div>
+
+    <div style="border-top:1px solid var(--border); padding-top:1.25rem;">
+      <div class="section-label">Cycliste</div>
+      <div class="slider-group">
+        <div class="slider-row">
+          <div>
+            <label>Masse cycliste</label>
+            <input type="range" min="45" max="110" value="70" step="1" id="w-body">
+          </div>
+          <div class="slider-val" id="w-body-out">70 kg</div>
+        </div>
+        <div class="slider-row">
+          <div>
+            <label>Masse équipement</label>
+            <input type="range" min="5" max="20" value="8" step="0.5" id="w-equip">
+          </div>
+          <div class="slider-val" id="w-equip-out">8 kg</div>
+        </div>
+        <div class="slider-row">
+          <div>
+            <label>Puissance moyenne</label>
+            <input type="range" min="80" max="500" value="200" step="5" id="power">
+          </div>
+          <div class="slider-val" id="power-out">200 W</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="hypo">
+      CdA montée = 0,32 m² (position grimpeur) · ρ = 1,2 kg/m³<br>
+      Cr : Parfait = 0,003 · Moyen = 0,005 · Chèvre = 0,010<br>
+      Vitesse résolue par équilibre des forces (méthode numérique)
+    </div>
+
+  </aside>
+
+  <!-- ── MAIN ──────────────────────────────────────────────────────── -->
+  <main class="main">
+
+    <!-- Segment stats -->
+    <div>
+      <div class="section-label">Stats du segment</div>
+      <div class="seg-stats">
+        <div class="stat-card">
+          <div class="sc-label">Distance</div>
+          <div class="sc-val" id="out-dist">—</div>
+          <div class="sc-unit">km</div>
+        </div>
+        <div class="stat-card">
+          <div class="sc-label">Dénivelé +</div>
+          <div class="sc-val" id="out-dplus">—</div>
+          <div class="sc-unit">mètres</div>
+        </div>
+        <div class="stat-card" style="border-left: 3px solid var(--accent-dark);">
+          <div class="sc-label">Pente moyenne</div>
+          <div class="sc-val" id="out-grade">—</div>
+          <div class="sc-unit">%</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Results -->
+    <div>
+      <div class="section-label">Résultats de l'effort</div>
+      <div class="results-grid">
+        <div class="result-card primary">
+          <div class="rc-label">Travail total</div>
+          <div class="rc-val" id="out-kj">—</div>
+          <div class="rc-unit">kilojoules</div>
+        </div>
+        <div class="result-card">
+          <div class="rc-label">Vitesse</div>
+          <div class="rc-val" id="out-spd">—</div>
+          <div class="rc-unit">km/h</div>
+        </div>
+        <div class="result-card">
+          <div class="rc-label">VAM</div>
+          <div class="rc-val" id="out-vam">—</div>
+          <div class="rc-unit">m/heure</div>
+        </div>
+        <div class="result-card">
+          <div class="rc-label">Durée cible</div>
+          <div class="rc-val" id="out-dur">—</div>
+          <div class="rc-unit">hh:mm:ss</div>
+        </div>
+        <div class="result-card" style="border-left: 3px solid var(--accent3);">
+          <div class="rc-label">Rapport W/kg</div>
+          <div class="rc-val" id="out-wkg" style="color: var(--accent3);">—</div>
+          <div class="rc-unit">watts par kg</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Breakdown -->
+    <div class="breakdown-section">
+      <div class="section-label">Décomposition des résistances</div>
+      <div class="breakdown-bars">
+        <div class="breakdown-row">
+          <span class="b-name">Gravité</span>
+          <div class="b-track"><div class="b-fill grav" id="bar-grav" style="width:0%"></div></div>
+          <span class="b-kj" id="label-grav">—</span>
+        </div>
+        <div class="breakdown-row">
+          <span class="b-name">Aérodynamique</span>
+          <div class="b-track"><div class="b-fill aero" id="bar-aero" style="width:0%"></div></div>
+          <span class="b-kj" id="label-aero">—</span>
+        </div>
+        <div class="breakdown-row">
+          <span class="b-name">Roulement</span>
+          <div class="b-track"><div class="b-fill roll" id="bar-roll" style="width:0%"></div></div>
+          <span class="b-kj" id="label-roll">—</span>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+// ── Constants ────────────────────────────────────────────────────────
+const G    = 9.81;
+const RHO  = 1.2;
+const CDA  = 0.32;     // fixed climbing CdA
+
+let currentCr = 0.003; // default: parfait
+
+// ── Haversine ────────────────────────────────────────────────────────
+function haversine(a, b) {
+  const R = 6371;
+  const dLat = (b.lat - a.lat) * Math.PI / 180;
+  const dLon = (b.lon - a.lon) * Math.PI / 180;
+  const x = Math.sin(dLat/2)**2 +
+    Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLon/2)**2;
+  return R * 2 * Math.asin(Math.sqrt(x));
+}
+
+// ── Parse GPX ────────────────────────────────────────────────────────
+function parseGPX(text) {
+  const parser = new DOMParser();
+  const xml = parser.parseFromString(text, 'application/xml');
+  const pts = [...xml.querySelectorAll('trkpt')];
+  if (!pts.length) throw new Error('Aucun point trouvé dans le fichier GPX');
+  return pts.map(pt => ({
+    lat: parseFloat(pt.getAttribute('lat')),
+    lon: parseFloat(pt.getAttribute('lon')),
+    ele: parseFloat(pt.querySelector('ele')?.textContent ?? 0)
+  }));
+}
+
+// ── Smooth elevation ─────────────────────────────────────────────────
+function smoothEle(points, w = 5) {
+  return points.map((pt, i) => {
+    const s = Math.max(0, i - w), e = Math.min(points.length - 1, i + w);
+    let sum = 0;
+    for (let j = s; j <= e; j++) sum += points[j].ele;
+    return { ...pt, ele: sum / (e - s + 1) };
+  });
+}
+
+// ── Solve velocity from power (binary search) ─────────────────────────
+// P = (Fg + Fr) * v + 0.5 * CdA * rho * v³
+function solveVelocity(P, totalMass, distM, dplus, Cr) {
+  if (distM <= 0 || dplus < 0) return 0;
+  const grade   = dplus / distM;                      // sin(α) approx
+  const cosA    = Math.sqrt(1 - Math.min(grade*grade, 0.9999));
+  const Fg      = totalMass * G * grade;
+  const Fr      = Cr * totalMass * G * cosA;
+  const k1      = Fg + Fr;
+  const k3      = 0.5 * CDA * RHO;
+
+  let lo = 0.01, hi = 25; // m/s
+  for (let i = 0; i < 100; i++) {
+    const mid = (lo + hi) / 2;
+    const p = (k1 + k3 * mid * mid) * mid;
+    if (p < P) lo = mid; else hi = mid;
+  }
+  return (lo + hi) / 2;
+}
+
+// ── Format duration ──────────────────────────────────────────────────
+function fmtDur(seconds) {
+  const h  = Math.floor(seconds / 3600);
+  const m  = Math.floor((seconds % 3600) / 60);
+  const s  = Math.round(seconds % 60);
+  return h + ':' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+}
+
+// ── Calculate ────────────────────────────────────────────────────────
+function calculate() {
+  const distKm  = parseFloat(document.getElementById('seg-dist').value);
+  const dplus   = parseFloat(document.getElementById('seg-dplus').value);
+  const wBody   = parseFloat(document.getElementById('w-body').value);
+  const wEquip  = parseFloat(document.getElementById('w-equip').value);
+  const power   = parseFloat(document.getElementById('power').value);
+  const totalM  = wBody + wEquip;
+  const distM   = distKm * 1000;
+
+  // Segment stats
+  const grade = (dplus / distM) * 100;
+  document.getElementById('out-dist').textContent  = distKm.toFixed(1);
+  document.getElementById('out-dplus').textContent = Math.round(dplus);
+  document.getElementById('out-grade').textContent = grade.toFixed(1);
+
+  // Solve velocity
+  const v = solveVelocity(power, totalM, distM, dplus, currentCr);
+  if (v <= 0) return;
+
+  const vKmh     = v * 3.6;
+  const durationS = distM / v;
+  const vam      = (dplus / durationS) * 3600;
+  const workKj   = (power * durationS) / 1000;
+  const wPerKg   = power / wBody;
+
+  document.getElementById('out-kj').textContent  = Math.round(workKj).toLocaleString('fr');
+  document.getElementById('out-spd').textContent = vKmh.toFixed(1);
+  document.getElementById('out-vam').textContent = Math.round(vam).toLocaleString('fr');
+  document.getElementById('out-dur').textContent = fmtDur(durationS);
+  document.getElementById('out-wkg').textContent = wPerKg.toFixed(2);
+
+  // Resistance breakdown (forces × distance = energy in kJ)
+  const gradeRatio = dplus / distM;
+  const cosA       = Math.sqrt(1 - Math.min(gradeRatio*gradeRatio, 0.9999));
+  const eGrav      = totalM * G * dplus / 1000;
+  const eAero      = 0.5 * CDA * RHO * v * v * distM / 1000;
+  const eRoll      = currentCr * totalM * G * cosA * distM / 1000;
+  const eTotal     = eGrav + eAero + eRoll;
+
+  document.getElementById('bar-grav').style.width  = (eGrav/eTotal*100).toFixed(1) + '%';
+  document.getElementById('bar-aero').style.width  = (eAero/eTotal*100).toFixed(1) + '%';
+  document.getElementById('bar-roll').style.width  = (eRoll/eTotal*100).toFixed(1) + '%';
+  document.getElementById('label-grav').textContent = Math.round(eGrav).toLocaleString('fr') + ' kJ';
+  document.getElementById('label-aero').textContent = Math.round(eAero).toLocaleString('fr') + ' kJ';
+  document.getElementById('label-roll').textContent = Math.round(eRoll).toLocaleString('fr') + ' kJ';
+}
+
+// ── Sliders ──────────────────────────────────────────────────────────
+const sliders = [
+  ['seg-dist',  'seg-dist-out',  v => parseFloat(v).toFixed(1) + ' km'],
+  ['seg-dplus', 'seg-dplus-out', v => Math.round(v) + ' m'],
+  ['w-body',    'w-body-out',    v => v + ' kg'],
+  ['w-equip',   'w-equip-out',   v => parseFloat(v).toFixed(1) + ' kg'],
+  ['power',     'power-out',     v => v + ' W'],
+];
+
+sliders.forEach(([id, outId, fmt]) => {
+  const el = document.getElementById(id);
+  const out = document.getElementById(outId);
+  el.addEventListener('input', () => { out.textContent = fmt(el.value); calculate(); });
+});
+
+// ── Road condition buttons ────────────────────────────────────────────
+document.querySelectorAll('.road-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.road-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentCr = parseFloat(btn.dataset.cr);
+    calculate();
+  });
+});
+
+// ── GPX file handling ─────────────────────────────────────────────────
+function handleFile(file) {
+  if (!file || !file.name.endsWith('.gpx')) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const pts = smoothEle(parseGPX(e.target.result));
+      let dist = 0, dplus = 0;
+      for (let i = 1; i < pts.length; i++) {
+        dist += haversine(pts[i-1], pts[i]);
+        const de = pts[i].ele - pts[i-1].ele;
+        if (de > 0) dplus += de;
+      }
+      // Clamp to slider ranges and update
+      const distClamped  = Math.min(Math.max(dist, 0.5), 80);
+      const dplusClamped = Math.min(Math.max(dplus, 20), 3000);
+      const distSlider   = document.getElementById('seg-dist');
+      const dplusSlider  = document.getElementById('seg-dplus');
+      distSlider.value   = distClamped.toFixed(1);
+      dplusSlider.value  = Math.round(dplusClamped);
+      document.getElementById('seg-dist-out').textContent  = distClamped.toFixed(1) + ' km';
+      document.getElementById('seg-dplus-out').textContent = Math.round(dplusClamped) + ' m';
+
+      const dz = document.getElementById('dropzone');
+      dz.classList.add('loaded');
+      document.getElementById('upload-title').textContent = file.name;
+      document.getElementById('upload-sub').textContent   = pts.length.toLocaleString('fr') + ' points GPS';
+      calculate();
+    } catch(err) {
+      alert('Erreur de lecture GPX : ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
+document.getElementById('gpx-input').addEventListener('change', e => handleFile(e.target.files[0]));
+const dz = document.getElementById('dropzone');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
+dz.addEventListener('drop', e => {
+  e.preventDefault(); dz.classList.remove('drag-over'); handleFile(e.dataTransfer.files[0]);
+});
+
+// ── Init ─────────────────────────────────────────────────────────────
+calculate();
+</script>
+</body>
+</html>
